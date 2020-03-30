@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Week2</string>
+    <string name="reminder">Reminder</string>
+    <string name="message">Message:</string>
+    <string name="messageHint">Remind me to...</string>
+    <string name="time">Time:</string>
+    <string name="year">Year</string>
+    <string name="month">Month</string>
+    <string name="day">Day</string>
+    <string name="hour">Hour</string>
+    <string name="minute">Minute</string>
+    <string name="save">Save</string>
+    <string name="err_info_message">Please check the message to remind.</string>
+    <string name="err_info_time">Please check the time value.</string>
+    <string name="err_title_message">Message Error</string>
+    <string name="err_title_time">Time Error</string>
+    <string name="err_ok">OK</string>
+</resources>

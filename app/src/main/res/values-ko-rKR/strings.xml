@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">2주차</string>
+    <string name="reminder">리마인더</string>
+    <string name="message">메시지:</string>
+    <string name="messageHint">알려줄 내용</string>
+    <string name="time">시간:</string>
+    <string name="year">년</string>
+    <string name="month">월</string>
+    <string name="day">일</string>
+    <string name="hour">시</string>
+    <string name="minute">분</string>
+    <string name="save">저장</string>
+    <string name="err_info_message">메시지를 다시 확인하여주십시오.</string>
+    <string name="err_info_time">시간을 다시 확인하여주십시오.</string>
+    <string name="err_title_message">메시지 오류</string>
+    <string name="err_title_time">시간 오류</string>
+    <string name="err_ok">확인</string>
+</resources>
