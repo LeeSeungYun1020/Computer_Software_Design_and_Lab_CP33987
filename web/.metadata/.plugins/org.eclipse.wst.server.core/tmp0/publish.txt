@@ -1,0 +1,4 @@
+#Tomcat publish data
+#Sat May 23 22:12:23 KST 2020
+org.eclipse.jst.j2ee.server\:Servers=C\:\\Program Files\\Apache Software Foundation\\Tomcat 8.5\\wtpwebapps\\Servers
+org.eclipse.jst.jee.server\:webProject=C\:\\Program Files\\Apache Software Foundation\\Tomcat 8.5\\wtpwebapps\\webProject

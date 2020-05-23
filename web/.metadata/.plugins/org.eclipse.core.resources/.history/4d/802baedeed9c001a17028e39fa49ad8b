@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Homework #6</title>
+<script type="text/javascript"
+		src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+<body>
+<h1>Homework #6</h1>
+<h2 id="message" style="color:red"></h2>
+<p id="messageDetail"></p>
+<p id="location">현재위치 : </p>
+<p id="POP">강수확률 : </p>
+<p id="PTY">강수형태 : </p>
+<p id="SKY">하늘상태 : </p>
+<p id="REH">습도 : </p>
+<p id="TMX">낮 최고기온 : </p>
+<p id="TMN">아침 최저기온 : </p>	
+<div id="map" style="width:500px;height:400px;"></div>
+</body>
+<script type="text/javascript">
+if (!navigator.onLine)
+	onOffline()
+	
+// 인터넷 연결 안 됨
+function onOffline() {
+	let isShow = false
+	if (('localStorage' in window) && window['localStorage'] !== null) {
+		isShow = loadWeatherData()
+	} else {
+		alert("web storage를 지원하지 않아 오프라인에서 데이터를 표시할 수 없습니다.")
+	}
+	document.getElementById('location').innerHTML += '오프라인'
+	document.getElementById('message').innerHTML = '오프라인'
+	if(isShow){
+		document.getElementById('messageDetail').innerHTML = '- 인터넷에 연결되지 않아 이전에 저장된 데이터가 표시되었습니다.'
+	}else{
+		alert('web storage에 저장된 데이터가 없습니다.')
+		document.getElementById('message').innerHTML += ' - 데이터 표시 불가'
+		document.getElementById('messageDetail').innerHTML = '- 이전에 인터넷에 연결된 적이 없어 웹 스토리지에 데이터가 저장되어 있지 않습니다.'
+	}
+}
+// 웹스토리지에 저장된 날씨 데이터 불러오기
+function loadWeatherData() {
+	let type = ['POP', 'PTY', 'SKY', 'REH', 'TMX', 'TMN']
+	for(let i of type){
+		let data = window.localStorage[i]
+		if (data != undefined){
+			document.getElementById(i).innerHTML = data
+		}else{
+			return false
+		}
+	}
+	return true
+}
+</script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=66d8841183c6255398aae11869e9e7ad&libraries=services"></script>
+<script type="text/javascript" src="http://jsgetip.appspot.com"></script>
+<script>
+const address = document.write(ip())//'183.103.45.38'
+getLocation(address, (status, longitude, latitude) => {
+	if (status){ // 위치 서버에 정상적으로 연결됨
+		try{
+			setMap(longitude, latitude)
+		} catch{// 카카오 위치 API는 도메인 제한이 있어 localhost 8080, 8081, 8090포트에서 접근 가능하게 설정
+			onfailed('location')
+		}
+		
+		conversion(longitude, latitude, (x, y) => {
+			getWeather(x, y, 1, (status, json) => {
+				if (status){ // 날씨 서버에 정상적으로 연결됨
+					let printResult = printWeatherData(json)
+					if(!(printResult[0]))// 데이터가 누락된 경우 / 낮, 아침 기온 데이터는 아침 시간 조회시에만 표시
+						getWeather(x, y, 2, (s, j) => {printWeatherData(j, printResult[1])})
+					storeWeatherData(json)
+				} else { // 날씨 서버 접속 실패
+					onfailed('weather')
+				}
+			})
+	    })
+	} else{ // 위치 서버 접속 실패
+		onfailed('location')
+	}
+})
+
+// GEOLocation API 사용해  ip기반 위도, 경도 가져옴
+function getLocation(ip, callback/*status, lon, lat*/) {
+	const access_key = '98eaa385ccd5159eaa150aecad672fca'
+	
+	$.ajax({
+	    url: `http://api.ipstack.com/${ip}?access_key=${access_key}&language=ko`,   
+	    dataType: 'jsonp',
+	    success: (json) => {
+	        callback(true, json.longitude, json.latitude)
+	    },
+	    error: (data) => {
+	    	callback(false)
+	    }
+	})
+}
+
+function setMap(longitude, latitude) {
+	var container = document.getElementById('map')
+	var options = {
+		center: new kakao.maps.LatLng(latitude, longitude),
+		level: 4
+	}
+	var map = new kakao.maps.Map(container, options)
+	
+	var geocoder = new kakao.maps.services.Geocoder()
+	geocoder.coord2Address(longitude, latitude, (result, status) => {
+	    if (status === kakao.maps.services.Status.OK) {
+	    	let loc = document.getElementById("location")
+			loc.innerHTML += result[0].address.address_name
+	    }
+	})
+}
+// 한국 기상청 전용 x, y 좌표로 변경
+function conversion(longitude, latitude, callback/*x, y*/){
+	const DEGRAD = Math.PI / 180.0
+	const re = 6371.00877 / 5.0
+	const slat1 = 30.0 * DEGRAD
+	const slat2 = 60.0 * DEGRAD
+	const olon = 126.0 * DEGRAD
+	const olat = 38.0 * DEGRAD
+
+	let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5)
+	sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn)
+	let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5)
+	sf = Math.pow(sf, sn) * Math.cos(slat1) / sn
+	let ro = Math.tan(Math.PI * 0.25 + olat * 0.5)
+	ro = re * sf / Math.pow(ro, sn)
+	
+	let ra = Math.tan(Math.PI * 0.25 + latitude * DEGRAD * 0.5)
+	ra = re * sf / Math.pow(ra, sn)
+	let theta = longitude * DEGRAD - olon
+	if (theta > Math.PI) theta -= 2.0 * Math.PI
+	if (theta < -(Math.PI)) theta += 2.0 * Math.PI
+	theta *= sn
+	let x = ra * Math.sin(theta) + 210 / 5.0
+	let y = (ro - ra * Math.cos(theta)) + 675 / 5.0
+	
+	callback(parseInt(x + 1.5, 10), parseInt(y + 1.5, 10))
+}
+// 기상청 API 이용해 상세 위치 및 날씨 정보 가져옴
+function getWeather(x, y, page, callback) {
+	const key = 'QlJXfpDq9oWm1PKEG0hZBbX06NXjih1QpY1ZqHXEWqx4aJQ2eqbU1dx4spZGGCR%2FLWwjq9RSXKM0UHFgGjeNTw%3D%3D'
+	const today = new Date()
+	let hour = today.getHours()
+	if(hour < 2)
+		today.setHours -= 2
+	
+	const date = getDateString(today)
+	const time = getNearestTimeString(hour)
+
+	// 공공데이터포털 기상청 API는 클라이언트에서 CORS를 지원하지 않음
+	let url = `http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst?serviceKey=${key}&pageNo=${page}&numOfRows=100&dataType=JSON&base_date=${date}&base_time=${time}&nx=${x}&ny=${y}`
+	// 자바로 텍스트 긁어옴
+	$.ajax({
+	    url: './apiData.jsp',
+	    data: {url: url},
+	    dataType: 'html',
+	    success: (html) => {
+	    	let domparser = new DOMParser()
+	    	let doc = domparser.parseFromString(html, 'text/html')
+	    	let json = JSON.parse(doc.getElementById('data').innerHTML)
+	    	if (json.response.header.resultCode != '00')
+	    		callback(false)
+	    	else
+	    		callback(true, json)
+	    },
+	    error: (data) => {
+	    	callback(false)
+	    }
+	})
+}
+// 동네 예보 조회 일자
+function getDateString(date){
+	let month = date.getMonth() + 1
+	if(month < 10)
+		month = '0' + month
+	let day = date.getDate()
+	if(day < 10)
+		day = '0' + day
+	return `${date.getFullYear()}${month}${day}`
+}
+// 동네 예보 조회 시간
+function getNearestTimeString(hour){
+	// 동네 예보는 0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300만 가능
+	let time
+	if (hour < 2)
+		time = '2300'
+	else if (2 <= hour && hour < 5)
+		time = '0200'
+	else if (5 <= hour && hour < 8)
+		time = '0500'
+	else if (8 <= hour && hour < 11)
+		time = '0800'
+	else if (11 <= hour && hour < 14)
+		time = '1100'
+	else if (14 <= hour && hour < 17)
+		time = '1400'
+	else if (17 <= hour && hour < 20)
+		time = '1700'
+	else if (20 <= hour && hour < 23)
+		time = '2000'
+	else if (23 <= hour)
+		time = '2300'
+	return time
+}
+// 받아온 날씨 데이터 출력
+function printWeatherData(json, isSet){
+	if (isSet == undefined)
+		isSet = [false, false, false, false, false, false]
+	let type = ['POP', 'PTY', 'SKY', 'REH', 'TMX', 'TMN']
+	let state = false
+	for(let i = 0; i < 100 && state == false; i++){
+		try{
+			let category = json.response.body.items.item[i].category
+			let value = json.response.body.items.item[i].fcstValue
+			for(let j in type){
+				if (!isSet[j] && category == type[j]){
+					isSet[j] = true
+					let element = document.getElementById(type[j])
+					element.innerHTML += convertWeatherData(category, value)
+				}
+			}
+		} finally {
+			for(let k in isSet){
+				if (!isSet[k])
+					break
+				else if (k == isSet.length - 1)
+					state = true
+			}
+		}
+	}
+	return [state, isSet]
+}
+// 날씨 데이터 변환
+function convertWeatherData(category, value){
+	const ptyValue = ['없음', '비', '비/눈', '눈', '소나기']
+	const skyValue = ['없음', '맑음', '구름조금', '구름많음', '흐림']
+	if(category == 'POP' || category == 'REH')
+		return value += '%'
+	else if(category == 'TMX' || category == 'TMN')
+		return value += '°C'
+	else if(category == 'PTY')
+		return ptyValue[value]
+	else if(category == 'SKY')
+		return skyValue[value]
+	else
+		return ''
+}
+// 웹스토리지에 날씨 데이터 저장
+function storeWeatherData(){
+	let type = ['POP', 'PTY', 'SKY', 'REH', 'TMX', 'TMN']
+	for(let i of type){
+		window.localStorage[i] = document.getElementById(i).innerHTML
+	}
+}
+// 웹스토리지에 저장된 날씨 데이터 불러오기
+function loadWeatherData() {
+	let type = ['POP', 'PTY', 'SKY', 'REH', 'TMX', 'TMN']
+	for(let i of type){
+		let data = window.localStorage[i]
+		if (data != undefined){
+			document.getElementById(i).innerHTML = data
+		}else{
+			return false
+		}
+	}
+	return true
+}
+// 인터넷 연결서버 연결 실패
+function onfailed(where) {
+	var isShow = false
+	alert('API 서버 연결에 실패하였습니다.')
+	if (('localStorage' in window) && window['localStorage'] !== null) {
+		isShow = loadWeatherData()
+	} else {
+		alert("web storage를 지원하지 않아 데이터를 표시할 수 없습니다.")
+	}
+	
+	document.getElementById('message').innerHTML = '서버 연결 실패'
+	
+	if(where = 'location'){
+		document.getElementById('message').innerHTML += ' - 위치 서버'
+		document.getElementById('location').innerHTML += '서버 연결 실패'
+		document.getElementById('messageDetail').innerHTML = ' - 사이트 도메인 제한 정책에 따라 http://localhost:8080, 8081, 8090에서만 위치 api를 로드할 수 있습니다.'
+	}else if (where = 'weather'){
+		document.getElementById('message').innerHTML += ' - 날씨 서버'
+		document.getElementById('messageDetail').innerHTML = ' - 날씨 서버 연결 실패'
+	}else{
+		document.getElementById('messageDetail').innerHTML = ' - 예외처리되지 않은 오류가 발생하였습니다. 다시 확인하여주십시오.'
+	}
+	
+	if(isShow){
+		document.getElementById('messageDetail').innerHTML += '<br> - 인터넷에 연결되지 않아 이전에 저장된 데이터가 표시되었습니다.'
+	}else{
+		document.getElementById('messageDetail').innerHTML += '<br> - 이전에 인터넷에 연결된 적이 없어 웹 스토리지에 데이터가 저장되어 있지 않습니다.'
+	}
+}
+
+</script>
+</html>

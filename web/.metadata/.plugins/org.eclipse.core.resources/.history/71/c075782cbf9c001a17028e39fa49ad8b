@@ -1,0 +1,47 @@
+<%@ page language="java" contentType="text/html; charset=EUC-KR"
+    pageEncoding="EUC-KR"%>
+<%@page
+import = "java.io.BufferedReader"
+import = "java.io.InputStreamReader"
+import = "java.net.HttpURLConnection"
+import = "java.net.URL"
+import = "java.net.URLEncoder"
+%>
+
+<%!
+StringBuffer sb;
+%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="EUC-KR">
+<title>GeoAPI</title>
+</head>
+<body>
+<%
+try {
+	String apiURL = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst?serviceKey=QlJXfpDq9oWm1PKEG0hZBbX06NXjih1QpY1ZqHXEWqx4aJQ2eqbU1dx4spZGGCR%2FLWwjq9RSXKM0UHFgGjeNTw%3D%3D&pageNo=1&numOfRows=50&dataType=JSON&base_date=20200523&base_time=1400&nx=98&ny=75";
+	URL url = new URL(apiURL);
+	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+	connection.setRequestMethod("GET");
+	int responseCode = connection.getResponseCode();
+	BufferedReader br;
+	if (responseCode == 200) {
+	br = new BufferedReader(new InputStreamReader(connection.getInputStream(),"UTF-8"));
+	} else {
+	br = new BufferedReader(new InputStreamReader(connection.getErrorStream(),"UTF-8"));
+	}
+	sb = new StringBuffer();
+	String line;
+	while ((line = br.readLine()) != null) {
+	%><%=line%><br><%
+	sb.append(line + "\n");
+	}
+	br.close();
+	connection.disconnect();
+} catch(Exception e){
+	System.err.println(e);
+}
+%>
+</body>
+</html>

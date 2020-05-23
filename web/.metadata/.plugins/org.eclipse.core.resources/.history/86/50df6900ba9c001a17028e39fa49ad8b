@@ -1,0 +1,17 @@
+
+fun getWeatherDataUseLocalServer(){
+	$.ajax({
+		url: `http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst?serviceKey=${key}&pageNo=1&numOfRows=50&dataType=JSON&base_date=${date}&base_time=${time}&nx=${x}&ny=${y}`,
+	    dataType: 'text/plain',
+	    success: (json) => {
+	    	json = JSON.parse(json)
+	    	if (json.response.header.resultCode != '00')
+	    		callback(false)
+	    	else
+	    		callback(true, json)
+	    },
+	    error: (data) => {
+	    	callback(false)
+	    }
+	})
+}
